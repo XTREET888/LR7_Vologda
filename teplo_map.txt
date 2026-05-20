@@ -1,0 +1,91 @@
+import { useEffect } from 'react';
+import { load } from '@2gis/mapgl';
+import { useMapglContext } from './MapglContext';
+import { useControlRotateClockwise } from './useControlRotateClockwise';
+import { MapWrapper } from './MapWrapper';
+import { FeatureCollection } from 'geojson';
+
+// Импортируем обрезанный файл с данными
+import geoData from './data/data.json';
+
+// Координаты Вологды [Долгота, Широта]
+export const MAP_CENTER = [39.8861, 59.2205];
+
+export default function Mapgl() {
+  const { setMapglContext } = useMapglContext();
+
+  useEffect(() => {
+    let map: mapgl.Map | undefined = undefined;
+
+    load().then((mapgl) => {
+      map = new mapgl.Map('map-container', {
+        center: MAP_CENTER,
+        zoom: 12,
+        key: '48a29c05-2126-44e6-b5b2-a9377642b09b',
+        style: 'f6706583-8b7b-4e81-b1dd-32ab484ec2a5',
+      });
+
+      const data: FeatureCollection = geoData as FeatureCollection;
+
+      new mapgl.GeoJsonSource(map, {
+        data,
+        attributes: {
+          visible: true,
+        },
+      });
+
+      // Слой тепловой карты
+      const heatmapLayer = {
+        id: 'dtp-heatmap-layer', // Уникальный ID
+        filter: [                // Фильтрация
+          'match',
+          ['sourceAttr', 'visible'],
+          [true],
+          true, 
+          false, 
+        ],
+        type: 'heatmap', // Тип объекта отрисовки
+        style: {
+          // Палитра градиента
+          color: [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0, 'rgba(0, 0, 0, 0)',
+            0.2, 'rgba(172, 32, 135, 1)',
+            0.4, 'rgba(255, 154, 0, 1)',
+            0.6, 'rgba(255, 252, 0, 1)',
+            0.8, 'rgba(255, 255, 63, 1)',
+            1, 'rgba(255, 255, 255, 1)',
+          ],
+          radius: 20,
+          intensity: 0.8,
+          opacity: 0.8,
+          downscale: 1,
+        },
+      };
+
+      map.on('styleload', () => {
+        map?.addLayer(heatmapLayer);
+      });
+
+      setMapglContext({
+        mapglInstance: map,
+        mapgl,
+      });
+    });
+
+    return () => {
+      map && map.destroy();
+      setMapglContext({ mapglInstance: undefined, mapgl: undefined });
+    };
+  }, [setMapglContext]);
+
+  useControlRotateClockwise();
+
+  return (
+    <>
+      <MapWrapper />
+    </>
+  );
+}

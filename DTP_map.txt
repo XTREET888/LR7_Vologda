@@ -1,0 +1,134 @@
+import { useEffect } from 'react';
+import { load } from '@2gis/mapgl';
+import { useMapglContext } from './MapglContext';
+import { useControlRotateClockwise } from './useControlRotateClockwise';
+import { MapWrapper } from './MapWrapper';
+import { FeatureCollection } from 'geojson';
+
+// Импортируем обрезанный файл с данными
+import geoData from './data/data.json';
+
+// Координаты Вологды [Долгота, Широта]
+export const MAP_CENTER = [39.8861, 59.2205];
+
+export default function Mapgl() {
+  const { setMapglContext } = useMapglContext();
+
+  useEffect(() => {
+    let map: mapgl.Map | undefined = undefined;
+
+    load().then((mapgl) => {
+      map = new mapgl.Map('map-container', {
+        center: MAP_CENTER,
+        zoom: 12,
+        key: '48a29c05-2126-44e6-b5b2-a9377642b09b',
+        style: 'f6706583-8b7b-4e81-b1dd-32ab484ec2a5',
+      });
+
+      const data: FeatureCollection = geoData as FeatureCollection;
+
+      new mapgl.GeoJsonSource(map, {
+        data,
+        attributes: {
+          visible: true,
+        },
+      });
+
+      // БАЗОВЫЙ ФИЛЬТР ВИДИМОСТИ
+      const visibleFilter = ['match', ['sourceAttr', 'visible'], [true], true, false];
+
+      
+      const commonPlateStyle = {
+        iconImage: 'plate',
+        
+        
+        
+        iconTextFit: 'both',    // Включаем растяжение по ширине и высоте
+        
+        
+        iconTextFitPadding: [6, 12, 6, 12], 
+        
+        iconPriority: 90,
+        textPriority: 100,
+        textPlacement: 'center',
+        textFont: ['Noto_Sans'],
+        textHaloColor: '#fff',
+        textHaloWidth: 1,
+      };
+
+      
+      // 1. СЛОЙ ДЛЯ ЛЕГКИХ ДТП (Зеленый текст)
+      const lightLayer = {
+        id: 'dtp-light',
+        type: 'point',
+        filter: [
+          'all',
+          visibleFilter,
+          ['==', ['get', 'severity'], 'Легкий']
+        ],
+        style: {
+          ...commonPlateStyle,
+          textField: ['get', 'category'], 
+          textColor: '#2ed573', 
+        }
+      };
+
+      // 2. СЛОЙ ДЛЯ ТЯЖЕЛЫХ ДТП (Оранжевый текст)
+      const heavyLayer = {
+        id: 'dtp-heavy',
+        type: 'point',
+        filter: [
+          'all',
+          visibleFilter,
+          ['any', ['==', ['get', 'severity'], 'Тяжелый'], ['==', ['get', 'severity'], 'Тяжёлый']]
+        ],
+        style: {
+          ...commonPlateStyle,
+          textField: ['get', 'category'], 
+          textColor: '#ffa502', 
+        }
+      };
+
+      // 3. СЛОЙ ДЛЯ ДТП С ПОГИБШИМИ (Красный текст)
+      const fatalLayer = {
+        id: 'dtp-fatal',
+        type: 'point',
+        filter: [
+          'all',
+          visibleFilter,
+          ['==', ['get', 'severity'], 'С погибшими']
+        ],
+        style: {
+          ...commonPlateStyle,
+          textField: ['get', 'category'], 
+          textColor: '#ff4757', 
+        }
+      };
+
+      // Добавляем слои на карту
+      map.on('styleload', () => {
+        map?.addLayer(lightLayer);
+        map?.addLayer(heavyLayer);
+        map?.addLayer(fatalLayer);
+      });
+
+      setMapglContext({
+        mapglInstance: map,
+        mapgl,
+      });
+    });
+
+    return () => {
+      map && map.destroy();
+      setMapglContext({ mapglInstance: undefined, mapgl: undefined });
+    };
+  }, [setMapglContext]);
+
+  useControlRotateClockwise();
+
+  return (
+    <>
+      <MapWrapper />
+    </>
+  );
+}
