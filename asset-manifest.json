@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/LR7_Vologda/static/css/main.7f4dc822.css",
+    "main.js": "/LR7_Vologda/static/js/main.cf43c4ee.js",
+    "index.html": "/LR7_Vologda/index.html",
+    "main.7f4dc822.css.map": "/LR7_Vologda/static/css/main.7f4dc822.css.map",
+    "main.cf43c4ee.js.map": "/LR7_Vologda/static/js/main.cf43c4ee.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7f4dc822.css",
+    "static/js/main.cf43c4ee.js"
+  ]
+}
